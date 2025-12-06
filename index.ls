@@ -10,6 +10,7 @@ stop-by = null
 delay = 60000
 audio-remind = null
 audio-end = null
+alarm-fade-handler = null
 
 new-audio = (file) ->
   node = new Audio!
@@ -24,6 +25,30 @@ sound-toggle = (des, state) ->
   else des
     ..currentTime = 0
     ..pause!
+
+stop-alarm = ->
+  if alarm-fade-handler => clearInterval alarm-fade-handler
+  alarm-fade-handler := null
+  if audio-end =>
+    audio-end.loop = false
+    sound-toggle audio-end, false
+    audio-end.volume = 1
+
+start-alarm = ->
+  stop-alarm!
+  if audio-end =>
+    audio-end.volume = 0.1
+    audio-end.loop = true
+    audio-end.currentTime = 0
+    audio-end.play!
+    alarm-fade-handler := setInterval ( ->
+      v = audio-end.volume + 0.1
+      if v >= 1 =>
+        audio-end.volume = 1
+        clearInterval alarm-fade-handler
+        alarm-fade-handler := null
+      else audio-end.volume = v
+    ), 500
 
 show = ->
   is-show := !is-show
@@ -40,11 +65,11 @@ adjust = (it,v) ->
 toggle = ->
   is-run := !is-run
   $ \#toggle .text if is-run => "STOP" else "RUN"
-  if !is-run and handler => 
+  if !is-run and handler =>
     stop-by := new Date!
     clearInterval handler
     handler := null
-    sound-toggle audio-end, false
+    stop-alarm!
     sound-toggle audio-remind, false
   if stop-by =>
     latency := latency + (new Date!)getTime! - stop-by.getTime!
@@ -53,7 +78,7 @@ toggle = ->
 reset = ->
   if delay == 0 => delay := 1000
   sound-toggle audio-remind, false
-  sound-toggle audio-end, false
+  stop-alarm!
   stop-by := 0
   is-warned := false
   is-blink := false
@@ -82,7 +107,7 @@ count = ->
     sound-toggle audio-remind, true
   if diff < 55000 => sound-toggle audio-remind, false
   if diff < 0 and !is-blink =>
-    sound-toggle audio-end, true
+    start-alarm!
     is-blink := true
     diff = 0
     clearInterval handler
@@ -115,5 +140,5 @@ window.onload = ->
   #audio-remind := new-audio \audio/cop-car.mp3
   #audio-end := new-audio \audio/fire-alarm.mp3
   audio-remind := new-audio \audio/smb_warning.mp3
-  audio-end := new-audio \audio/smb_mariodie.mp3
+  audio-end := new-audio \audio/fire-alarm.mp3
 window.onresize = -> resize!
